@@ -14,7 +14,7 @@ global_defs {
 vrrp_script chk_nginx {
   script "/etc/keepalived/check_nginx.sh"
   interval 2
-  weight 2
+  weight 50
 }
 
 vrrp_instance nginx-vip {
@@ -58,7 +58,7 @@ global_defs {
 vrrp_script chk_nginx {
   script "/etc/keepalived/check_nginx.sh"
   interval 2
-  weight 2
+  weight 50
 }
 
 vrrp_instance nginx-vip {
@@ -89,7 +89,6 @@ vrrp_instance nginx-vip {
 #SCRIPT check_nginx
 #!/bin/sh
 if [ -z "`/bin/pidof nginx`" ]; then
-	systemctl stop keepalived.service
 	exit 1
 fi
 # Change mode of the script
