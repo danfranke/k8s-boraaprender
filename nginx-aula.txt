@@ -1,0 +1,96 @@
+#NGINX 01
+#/etc/keepalived/keepalived.conf
+
+global_defs {
+  notification_email {
+}
+
+  router_id LVS_DEVEL
+  vrrp_skip_check_adv_addr
+  vrrp_garp_interval 0
+  vrrp_gna_interval 0
+}
+
+vrrp_script chk_nginx {
+  script "/etc/keepalived/check_nginx.sh"
+  interval 2
+  weight 2
+}
+
+vrrp_instance nginx-vip {
+  state MASTER
+  priority 110
+  interface ens33 # Coloque o nome de sua placa de rede
+  virtual_router_id 60
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass 1111
+  }
+
+  unicast_src_ip 192.168.1.15 #IP DO nginx01
+  unicast_peer {
+    192.168.1.16  #IP DO nginx02
+  }
+
+  virtual_ipaddress {
+    192.168.1.14/24 # IP VIRTUAL
+  }
+
+  track_script {
+    chk_nginx
+  }
+}
+
+#NGINX 02
+#/etc/keepalived/keepalived.conf
+
+global_defs {
+  notification_email {
+}
+
+  router_id LVS_DEVEL
+  vrrp_skip_check_adv_addr
+  vrrp_garp_interval 0
+  vrrp_gna_interval 0
+}
+
+vrrp_script chk_nginx {
+  script "/etc/keepalived/check_nginx.sh"
+  interval 2
+  weight 2
+}
+
+vrrp_instance nginx-vip {
+  state BACKUP
+  priority 100
+  interface ens33 # Coloque o nome de sua placa de rede
+  virtual_router_id 60
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass 1111
+  }
+
+  unicast_src_ip 192.168.1.16      #IP DO nginx02
+  unicast_peer {
+    192.168.1.15 # # IPDO nginx01
+  }
+
+  virtual_ipaddress {
+    192.168.1.14/24 # IP VIRTUAL
+  }
+
+  track_script {
+    chk_nginx
+  }
+}
+
+#SCRIPT check_nginx
+#!/bin/sh
+if [ -z "`/bin/pidof nginx`" ]; then
+	systemctl stop keepalived.service
+	exit 1
+fi
+# Change mode of the script
+#sudo chmod +x /etc/keepalived/check_nginx.sh
