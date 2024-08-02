@@ -1,0 +1,118 @@
+
+#HAPROXY 01
+#/etc/keepalived/keepalived.conf
+
+global_defs {
+  notification_email {
+}
+
+  router_id LVS_DEVEL
+  vrrp_skip_check_adv_addr
+  vrrp_garp_interval 0
+  vrrp_gna_interval 0
+}
+
+vrrp_script chk_haproxy {
+  script "killall -0 haproxy"
+  interval 2
+  weight 50
+}
+
+vrrp_instance haproxy-vip {
+  state MASTER
+  priority 110
+  interface ens33 # Coloque o nome de sua placa de rede
+  virtual_router_id 60
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass 1111
+  }
+
+  unicast_src_ip 192.168.1.18      # IP DO HAPROXY01
+  unicast_peer {
+    192.168.1.19 # # IP DO HAPROXY02
+  }
+
+  virtual_ipaddress {
+    192.168.1.17/24 # IP VIRTUAL
+  }
+
+  track_script {
+    chk_haproxy
+  }
+}
+
+
+#HAPROXY 02
+#/etc/keepalived/keepalived.conf
+
+global_defs {
+  notification_email {
+}
+
+  router_id LVS_DEVEL
+  vrrp_skip_check_adv_addr
+  vrrp_garp_interval 0
+  vrrp_gna_interval 0
+}
+
+vrrp_script chk_haproxy {
+  script "killall -0 haproxy"
+  interval 2
+  weight 50
+}
+
+vrrp_instance haproxy-vip {
+  state BACKUP
+  priority 100
+  interface ens33 # Coloque o nome de sua placa de rede
+  virtual_router_id 60
+  advert_int 1
+  authentication {
+    auth_type PASS
+    auth_pass 1111
+  }
+
+  unicast_src_ip 192.168.1.19      # IP DO HAPROXY02
+  unicast_peer {
+    192.168.1.18 # # IP DO HAPROXY01
+  }
+
+  virtual_ipaddress {
+    192.168.1.17/24 # IP VIRTUAL
+  }
+
+  track_script {
+    chk_haproxy
+  }
+}
+
+##CONFIGURAÇAO HAPROXY.CFG
+
+listen stats
+    bind *:20000
+    mode http
+    stats enable
+    stats refresh 3s
+    stats uri /stats
+    timeout client 10000
+    timeout connect 10000
+    timeout server 30000
+    stats auth monitor:monitor
+
+frontend k8s-apiserver
+  bind *:6443
+  mode tcp
+  option tcplog
+  default_backend k8s-apiserver
+
+backend k8s-apiserver
+    mode tcp
+    option tcplog  
+    balance roundrobin
+    default-server inter 10s downinter 5s rise 2 fall 2 slowstart 60s maxconn 250 maxqueue 256 weight 100
+    server controlplane01 192.168.1.20:6443 check
+    server controlplane02 192.168.1.21:6443 check
+    server controlplane03 192.168.1.22:6443 check
+
