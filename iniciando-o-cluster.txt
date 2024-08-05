@@ -1,0 +1,17 @@
+#Iniciar o primeiro Control-Plane (somente na VM controlplane01)
+sudo kubeadm init --control-plane-endpoint=VIP_HAPROXY:6443 --upload-certs
+
+#Onde após executar aguarde alguns instantes e exibirá o texto abaixo (ATENÇÃO: use a chave gerada por você, pois muda a cada inicialização ) 
+#SALVE ESTA SAIDA EM BLOCO DE NOTAS POIS USAREMOS ELA ADICIONAR OS DEMAIS CONTROL-PLANES E WORKES.
+
+#Execute isso após cada Control-Plane for iniciado
+
+ mkdir -p $HOME/.kube
+ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+ sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+ #Agora vamos efetuar o deploy do plugin de rede, aplique o plugin de rede Weave no primeiro nó do plano de controle (somente no controlplane01) :
+ kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
+
+ #E agora execute o comando para verificar se os NODES estão no AR
+ sudo kubectl get nodes
